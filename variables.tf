@@ -12,3 +12,13 @@ variable "cloud_region" {
   description = "Cloud Region for primary OpenSearch cluster"
   type = string
 }
+
+variable "external_account_id" {
+  description = "Account ID for GCP, used to peer VPCs"
+  type = string
+}
+
+variable "external_vpc_id" {
+  description = "Google VPC to peer Aiven services to"
+  type = string
+}
