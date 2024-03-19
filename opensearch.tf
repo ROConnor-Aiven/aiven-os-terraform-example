@@ -5,22 +5,37 @@ resource "aiven_organization" "sampleorg" {
 
 #Create a project for that Org
 resource "aiven_project" "zimp_sample_project" {
-  project    = "zim-demo"
+  project    = "zimo-demo"
   parent_id = aiven_organization.sampleorg.id
 }
 
-#Creat an Admin Team
-resource "aiven_account_team" "tm-admin" {
-  account_id = aiven_organization.sampleorg.id
-  name       = "Admins"
+#Create an Admin Team
+resource "aiven_organization_user_group" "tm-admin" {
+  organization_id = aiven_organization.sampleorg.id
+  name            = "Admins"
+  description     = "Administers all projects"
 }
 
 #Grant the team admin Access to your project
-resource "aiven_account_team_project" "rbac-prod-admin" {
-  account_id   = aiven_organization.sampleorg.id
-  team_id      = aiven_account_team.tm-admin.team_id
-  project_name = aiven_project.zimp_sample_project.project
-  team_type    = "admin"
+#This requires the PROVIDER_AIVEN_ENABLE_BETA environment variable to be set to "true"
+resource "aiven_organization_group_project" "rbac-prod-admin" {
+  group_id            = aiven_organization_user_group.tm-admin.id
+  project             = aiven_project.zimp_sample_project.project
+  role                = "admin"
+}
+
+#Datadog Endpoint
+resource "aiven_service_integration_endpoint" "datadog" {
+   project = aiven_project.zimp_sample_project.project
+   endpoint_name="Datadog Metrics"
+   endpoint_type="datadog"
+    datadog_user_config {
+        datadog_api_key = "xxxxxxxxxxx"
+        datadog_tags {
+          tag = "<Customer Name?>"
+        }
+        #site = "<Your Site Here if non-Standard>" # Datadog intake site. Defaults to datadoghq.com
+    }
 }
 
 #VPC
@@ -71,6 +86,15 @@ resource "aiven_opensearch" "os1" {
   }
 }
 
+#Send OS metrics to Datadog
+resource "aiven_service_integration" "datadog_os_metrics_int" {
+    project = aiven_project.zimp_sample_project.project
+    destination_endpoint_id = aiven_service_integration_endpoint.datadog.id
+    destination_service_name = ""
+    integration_type = "datadog"
+    source_service_name = aiven_opensearch.os1.service_name
+}
+
 #Kafka Service
 resource "aiven_kafka" "kafka1" {
   project                 = aiven_project.zimp_sample_project.project
@@ -98,3 +122,13 @@ resource "aiven_kafka" "kafka1" {
     }
   }
 }
+
+#Send Kafka Metrics to Datadog
+resource "aiven_service_integration" "datadog_kafka_metrics_int" {
+  project = aiven_project.zimp_sample_project.project
+  destination_endpoint_id = aiven_service_integration_endpoint.datadog.id
+  destination_service_name = ""
+  integration_type = "datadog"
+  source_service_name = aiven_kafka.kafka1.service_name
+}
+

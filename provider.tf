@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aiven = {
       source  = "aiven/aiven"
-      version = "4.9.3"
+      version = "4.14.0"
     }
   }
 }
